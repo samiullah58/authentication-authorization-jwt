@@ -2,7 +2,6 @@ const { User, validate } = require("../model/user.model");
 const Token = require("../model/token.model");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-require("dotenv").config();
 const express = require("express");
 const router = express.Router();
 
@@ -64,7 +63,6 @@ router.post("/login", async (req, res) => {
     res.json({ accessToken, refreshToken });
   } catch (error) {
     res.status(500).json({ error: error.message });
-    // console.log(error);
   }
 });
 

@@ -11,7 +11,6 @@ app.use(morgan("dev"));
 app.use(express.json());
 
 app.get("/", async (req, res) => {
-  // res.setHeader("Content-Type", "application/json");
   res.send("this is our main route");
 });
 
