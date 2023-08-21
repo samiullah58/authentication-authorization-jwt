@@ -135,6 +135,97 @@ router.post("/refresh", async (req, res) => {
   }
 });
 
+router.post("/resetPassword", async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ message: "User not found with the given email" });
+    }
+
+    const verificationToken = jwt.sign(
+      { userId: user._id },
+      process.env.SECRET_KEY,
+      { expiresIn: process.env.RESET_PASSWORD_VERIFY_TIME }
+    );
+
+    const verificationLink = `http://localhost:3000/auth/resetPassword/${verificationToken}`;
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_ADDRESS,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_ADDRESS,
+      to: "samiullahrashid4@gmail.com",
+      subject: "Reset Password Verification",
+      text: `Please click the following link to reset your password: ${verificationLink}`,
+    };
+    transporter.sendMail(mailOptions, function (err, info) {
+      if (err) {
+        res.status(500).json({ error: "Error sending verification email." });
+      } else {
+        console.log("Email sent:", info.response);
+        res.status(200).json({
+          message: `Reset Password Varification link has been sent to ${mailOptions.to}.`,
+        });
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.put("/resetPassword/:token", async (req, res) => {
+  try {
+    const verificationToken = req.params.token;
+    const decoded = jwt.verify(verificationToken, process.env.SECRET_KEY);
+
+    const { newPassword, confirmNewPassword } = req.body;
+
+    const user = await User.findById(decoded.userId);
+    console.log(user);
+    if (!user) {
+      res.status(404).json({ message: "User not found with the given token." });
+    }
+
+    const currentTimeInSeconds = Math.floor(Date.now() / 1000);
+
+    if (decoded.exp < currentTimeInSeconds) {
+      return res.status(401).json({ message: "Verification token expired." });
+    }
+
+    const isPassword = await user.validatePassword(newPassword);
+    if (isPassword) {
+      return res
+        .status(400)
+        .json({ message: "newPassword must be different from old password." });
+    }
+
+    const matchingPassword = newPassword !== confirmNewPassword;
+    if (matchingPassword) {
+      return res
+        .status(400)
+        .json({ message: "newPassword and confirmNewPassword must be match" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const newHashedPassword = await bcrypt.hash(newPassword, salt);
+    user.password = newHashedPassword;
+    await user.save();
+
+    res.status(200).json({ message: "everything is updated" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.get("/verify/:token", async (req, res) => {
   try {
     const verificationToken = req.params.token;
