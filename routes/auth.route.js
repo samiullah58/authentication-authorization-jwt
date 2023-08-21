@@ -116,24 +116,20 @@ router.post("/refresh", async (req, res) => {
     const { refreshToken } = req.body;
     if (!refreshToken)
       return res.status(401).json({ message: "Invalid refresh token." });
-    jwt.verify(
-      refreshToken,
-      process.env.REFRESH_SECRET_KEY,
-      async (err, decoded) => {
-        if (err)
-          return res.status(401).json({ message: "Invalid refresh token." });
+    jwt.verify(refreshToken, process.env.SECRET_KEY, async (err, decoded) => {
+      if (err)
+        return res.status(401).json({ message: "Invalid refresh token." });
 
-        const user = await User.findById({ _id: decoded.userId });
-        if (!user) return res.status(401).json({ message: "User not found." });
+      const user = await User.findById({ _id: decoded.userId });
+      if (!user) return res.status(401).json({ message: "User not found." });
 
-        const newAccessToken = jwt.sign(
-          { userId: user._id },
-          process.env.SECRET_KEY,
-          { expiresIn: process.env.ACCESS_EXPIRE_TIME }
-        );
-        res.json({ accessToken: newAccessToken });
-      }
-    );
+      const newAccessToken = jwt.sign(
+        { userId: user._id },
+        process.env.SECRET_KEY,
+        { expiresIn: process.env.ACCESS_EXPIRE_TIME }
+      );
+      res.json({ accessToken: newAccessToken });
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
