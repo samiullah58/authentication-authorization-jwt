@@ -15,6 +15,9 @@ router.post("/register", async (req, res) => {
 
     const user = await new User({ email, password });
 
+    const hashedPassword = await user.createPassword(password);
+    user.password = hashedPassword;
+
     const verificationToken = jwt.sign(
       { userId: user._id },
       process.env.SECRET_KEY,
@@ -73,9 +76,9 @@ router.post("/login", async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const isPassword = await bcrypt.compare(password, user.password);
+    const isPassword = await user.validatePassword(password);
     if (!isPassword) {
-      return res.status(401).json({ message: "Invalid Credentials." });
+      return res.status(400).json({ message: "Invalid credentials!" });
     }
 
     const refreshToken = jwt.sign(

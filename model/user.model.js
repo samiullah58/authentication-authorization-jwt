@@ -21,16 +21,15 @@ const userSchema = new mongoose.Schema({
   },
 });
 
-userSchema.pre("save", async function (next) {
-  try {
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(this.password, salt);
-    this.password = hashedPassword;
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
+userSchema.methods.createPassword = async function (plainTextPassword) {
+  const saltRounds = 10;
+  const salt = await bcrypt.genSalt(saltRounds);
+  return await bcrypt.hash(plainTextPassword, salt);
+};
+
+userSchema.methods.validatePassword = async function (condidatePassword) {
+  return await bcrypt.compare(condidatePassword, this.password);
+};
 
 const User = new mongoose.model("user", userSchema);
 
